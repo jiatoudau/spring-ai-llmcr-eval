@@ -51,6 +51,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.springframework.ai.chat.messages.ToolResponseMessage.ToolResponse;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.util.Assert;
 
@@ -230,6 +231,20 @@ public final class S3ChatMemoryRepository implements ChatMemoryRepository {
 				messageMap.put("content", message.getText());
 				messageMap.put("timestamp", baseTimestamp + i);
 				messageMap.put("metadata", message.getMetadata());
+
+				// Persist ToolResponse objects for TOOL messages
+				if (message.getMessageType() == MessageType.TOOL && message instanceof ToolResponseMessage toolMsg) {
+					List<Map<String, String>> toolResponses = new ArrayList<>();
+					for (ToolResponse response : toolMsg.getResponses()) {
+						Map<String, String> responseMap = new HashMap<>();
+						responseMap.put("id", response.id());
+						responseMap.put("name", response.name());
+						responseMap.put("responseData", response.responseData());
+						toolResponses.add(responseMap);
+					}
+					messageMap.put("toolResponses", toolResponses);
+				}
+
 				messageList.add(messageMap);
 			}
 
@@ -270,7 +285,21 @@ public final class S3ChatMemoryRepository implements ChatMemoryRepository {
 				}
 
 				MessageType type = MessageType.valueOf(typeStr);
-				Message message = createMessage(type, content, metadata);
+
+				// Extract toolResponses if present
+				List<ToolResponse> toolResponses = null;
+				if (type == MessageType.TOOL && messageNode.has("toolResponses")
+						&& !messageNode.get("toolResponses").isNull()) {
+					toolResponses = new ArrayList<>();
+					for (JsonNode responseNode : messageNode.get("toolResponses")) {
+						String id = responseNode.get("id").asText();
+						String name = responseNode.get("name").asText();
+						String responseData = responseNode.get("responseData").asText();
+						toolResponses.add(new ToolResponse(id, name, responseData));
+					}
+				}
+
+				Message message = createMessage(type, content, metadata, toolResponses);
 
 				messages.add(message);
 			}
@@ -294,20 +323,24 @@ public final class S3ChatMemoryRepository implements ChatMemoryRepository {
 	}
 
 	/**
-	 * Creates a message instance based on type. Note: TOOL messages do not preserve
-	 * content as the ToolResponseMessage requires structured ToolResponse objects which
-	 * cannot be reconstructed from plain text content.
+	 * Creates a message instance based on type. TOOL messages now properly reconstruct
+	 * ToolResponse objects from persisted data.
 	 * @param type the message type
 	 * @param content the message content
 	 * @param metadata the message metadata
+	 * @param toolResponses the list of ToolResponse objects (only for TOOL messages)
 	 * @return the message instance
 	 */
-	private Message createMessage(final MessageType type, final String content, final Map<String, Object> metadata) {
+	private Message createMessage(final MessageType type, final String content, final Map<String, Object> metadata,
+			final @Nullable List<ToolResponse> toolResponses) {
 		return switch (type) {
 			case USER -> UserMessage.builder().text(content).metadata(metadata).build();
 			case ASSISTANT -> AssistantMessage.builder().content(content).properties(metadata).build();
 			case SYSTEM -> SystemMessage.builder().text(content).metadata(metadata).build();
-			case TOOL -> ToolResponseMessage.builder().responses(List.of()).metadata(metadata).build();
+			case TOOL -> ToolResponseMessage.builder()
+				.responses(toolResponses != null ? toolResponses : List.of())
+				.metadata(metadata)
+				.build();
 		};
 	}
 

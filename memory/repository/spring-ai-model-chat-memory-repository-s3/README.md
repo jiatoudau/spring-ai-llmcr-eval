@@ -215,7 +215,7 @@ public class ConversationService {
 - `STANDARD` - General purpose storage (default)
 - `STANDARD_IA` - Infrequent access storage (lower cost)
 - `ONEZONE_IA` - Single AZ infrequent access
-- `REDUCED_REDUNDANCY` - Reduced redundancy storage
+- `REDUCED_REDUNDANCY` (deprecated) - AWS has deprecated this storage class and recommends using `STANDARD` instead as a more cost-effective option
 
 ## S3-Specific Considerations
 

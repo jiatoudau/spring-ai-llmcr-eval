@@ -18,6 +18,7 @@ package org.springframework.ai.chat.memory.repository.s3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +55,7 @@ class S3ChatMemoryRepositoryIT {
 	static final LocalStackContainer localstack = initializeLocalStack();
 
 	private static LocalStackContainer initializeLocalStack() {
-		LocalStackContainer container = new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"));
+		LocalStackContainer container = new LocalStackContainer(DockerImageName.parse("localstack/localstack:2026.05.0"));
 		container.withServices("s3");
 		return container;
 	}
@@ -84,7 +85,7 @@ class S3ChatMemoryRepositoryIT {
 		}
 
 		// Create this.repository with unique prefix for each test
-		String uniquePrefix = "test-" + System.currentTimeMillis();
+		String uniquePrefix = "test-" + UUID.randomUUID().toString();
 
 		this.repository = S3ChatMemoryRepository.builder()
 			.s3Client(this.s3Client)

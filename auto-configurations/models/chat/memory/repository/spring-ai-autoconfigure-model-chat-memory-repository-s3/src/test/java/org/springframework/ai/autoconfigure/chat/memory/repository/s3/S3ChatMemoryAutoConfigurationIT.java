@@ -16,8 +16,6 @@
 
 package org.springframework.ai.autoconfigure.chat.memory.repository.s3;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -30,8 +28,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.repository.s3.S3ChatMemoryRepository;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -51,7 +47,7 @@ class S3ChatMemoryAutoConfigurationIT {
 	static final LocalStackContainer localstack = initializeLocalStack();
 
 	private static LocalStackContainer initializeLocalStack() {
-		LocalStackContainer container = new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"));
+		LocalStackContainer container = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.5.0"));
 		container.withServices("s3");
 		return container;
 	}
@@ -94,7 +90,6 @@ class S3ChatMemoryAutoConfigurationIT {
 
 				// Verify the repository works with custom S3Client
 				S3ChatMemoryRepository repository = context.getBean(S3ChatMemoryRepository.class);
-				List<Message> messages = List.of(UserMessage.builder().text("test").build());
 
 				// This should not throw an exception (though it may fail due to
 				// LocalStack setup)
